@@ -81,7 +81,6 @@ public class CustomerRequestService {
                 .orElseThrow(
                         () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Customer request not found"));
 
-        CustomerRequestStatus oldStatus = entity.getStatus();
         entity.setStatus(newStatus);
         CustomerRequest updated = repository.save(entity);
 
