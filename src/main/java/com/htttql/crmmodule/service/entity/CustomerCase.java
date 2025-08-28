@@ -45,7 +45,7 @@ public class CustomerCase extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "primary_service_id", foreignKey = @ForeignKey(name = "fk_case_primary_service"))
-    private Service primaryService;
+    private SpaService primaryService;
 
     @Column(name = "intake_note", columnDefinition = "TEXT")
     private String intakeNote;

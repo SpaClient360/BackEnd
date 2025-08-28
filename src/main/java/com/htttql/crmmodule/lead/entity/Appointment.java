@@ -5,7 +5,7 @@ import com.htttql.crmmodule.common.entity.BaseEntity;
 import com.htttql.crmmodule.common.enums.AppointmentStatus;
 import com.htttql.crmmodule.core.entity.Customer;
 import com.htttql.crmmodule.core.entity.StaffUser;
-import com.htttql.crmmodule.service.entity.Service;
+import com.htttql.crmmodule.service.entity.SpaService;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -48,7 +48,7 @@ public class Appointment extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "service_id", foreignKey = @ForeignKey(name = "fk_appt_service"))
-    private Service service;
+    private SpaService service;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "technician_id", nullable = false, foreignKey = @ForeignKey(name = "fk_appt_technician"))

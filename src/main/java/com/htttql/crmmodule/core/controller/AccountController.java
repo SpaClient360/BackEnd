@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 /**
  * Account management controller - Public API
  */
-@Tag(name = "Account Management", description = "Public account creation")
+@Tag(name = "Account Management", description = "Public account creation - No authentication required")
 @RestController
 @RequestMapping("/api/accounts")
 @RequiredArgsConstructor

@@ -38,7 +38,7 @@ public class CaseService extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "service_id", nullable = false, foreignKey = @ForeignKey(name = "fk_case_service_service"))
-    private Service service;
+    private SpaService service;
 
     @Column(name = "unit_price", nullable = false, precision = 12, scale = 2)
     private BigDecimal unitPrice;

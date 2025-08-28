@@ -1,43 +1,22 @@
 package com.htttql.crmmodule.lead.service;
 
-import com.htttql.crmmodule.lead.dto.CreateLeadRequest;
-import com.htttql.crmmodule.lead.dto.CreateLeadResponse;
-import com.htttql.crmmodule.lead.dto.LeadDto;
-import com.htttql.crmmodule.lead.dto.UpdateLeadStatusRequest;
+import com.htttql.crmmodule.lead.dto.LeadRequest;
+import com.htttql.crmmodule.lead.dto.LeadResponse;
+import com.htttql.crmmodule.lead.dto.LeadStatusRequest;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-/**
- * Interface for Lead service operations
- */
 public interface ILeadService {
 
-    /**
-     * Get all leads with pagination
-     */
-    Page<LeadDto> getAllLeads(int page, int size);
+    Page<LeadResponse> getAllLeads(Pageable pageable);
 
-    /**
-     * Get lead by ID
-     */
-    LeadDto getLeadById(Long id);
+    LeadResponse getLeadById(Long id);
 
-    /**
-     * Create new lead
-     */
-    CreateLeadResponse createLead(CreateLeadRequest request);
+    LeadResponse createLead(LeadRequest request);
 
-    /**
-     * Check if customer exists by phone number
-     */
-    boolean isExistingCustomer(String phone);
+    LeadResponse updateLead(Long id, LeadRequest request);
 
-    /**
-     * Update lead status
-     */
-    LeadDto updateLeadStatus(Long id, UpdateLeadStatusRequest request);
-
-    /**
-     * Delete lead
-     */
     void deleteLead(Long id);
+
+    LeadResponse updateLeadStatus(Long id, LeadStatusRequest request);
 }

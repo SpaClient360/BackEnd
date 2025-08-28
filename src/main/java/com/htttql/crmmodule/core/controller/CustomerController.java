@@ -1,88 +1,82 @@
 package com.htttql.crmmodule.core.controller;
 
-import com.htttql.crmmodule.common.dto.ApiResponse;
-import com.htttql.crmmodule.core.dto.CreateCustomerRequest;
-import com.htttql.crmmodule.core.dto.CustomerDto;
-import com.htttql.crmmodule.core.dto.UpdateCustomerRequest;
+import com.htttql.crmmodule.core.dto.CustomerRequest;
+import com.htttql.crmmodule.core.dto.CustomerResponse;
 import com.htttql.crmmodule.core.service.ICustomerService;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
-/**
- * Customer management controller
- */
 @Tag(name = "Customer Management", description = "Customer CRUD operations")
 @RestController
 @RequestMapping("/api/customers")
 @RequiredArgsConstructor
-@SecurityRequirement(name = "Bearer Authentication")
 public class CustomerController {
 
     private final ICustomerService customerService;
 
     @Operation(summary = "Get all customers with pagination")
-    @GetMapping("/page")
-    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'MANAGER')")
-    public ResponseEntity<ApiResponse<List<CustomerDto>>> getAllCustomersWithPagination(
+    @SecurityRequirement(name = "Bearer Authentication")
+    @PreAuthorize("hasAnyRole('MANAGER', 'RECEPTIONIST', 'TECHNICIAN')")
+    @GetMapping
+    public ResponseEntity<Page<CustomerResponse>> getAllCustomers(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        List<CustomerDto> customers = customerService.getAllCustomers(page, size);
-        return ResponseEntity.ok(ApiResponse.success(customers));
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "customerId") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+
+        Sort sort = sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<CustomerResponse> customers = customerService.getAllCustomers(pageable);
+        return ResponseEntity.ok(customers);
     }
 
     @Operation(summary = "Get customer by ID")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @PreAuthorize("hasAnyRole('MANAGER', 'RECEPTIONIST', 'TECHNICIAN')")
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'TECHNICIAN', 'MANAGER')")
-    public ResponseEntity<ApiResponse<CustomerDto>> getCustomerById(@PathVariable Long id) {
-        CustomerDto customer = customerService.getCustomerById(id);
-        return ResponseEntity.ok(ApiResponse.success(customer));
-    }
-
-    @Operation(summary = "Get customer by phone")
-    @GetMapping("/phone/{phone}")
-    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'MANAGER')")
-    public ResponseEntity<ApiResponse<CustomerDto>> getCustomerByPhone(@PathVariable String phone) {
-        CustomerDto customer = customerService.getCustomerByPhone(phone);
-        return ResponseEntity.ok(ApiResponse.success(customer));
+    public ResponseEntity<CustomerResponse> getCustomerById(@PathVariable Long id) {
+        CustomerResponse customer = customerService.getCustomerById(id);
+        return ResponseEntity.ok(customer);
     }
 
     @Operation(summary = "Create new customer")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @PreAuthorize("hasAnyRole('MANAGER', 'RECEPTIONIST')")
     @PostMapping
-    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'MANAGER')")
-    public ResponseEntity<ApiResponse<CustomerDto>> createCustomer(
-            @Valid @RequestBody CreateCustomerRequest request) {
-
-        CustomerDto customer = customerService.createCustomer(request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(customer, "Customer created successfully"));
+    public ResponseEntity<CustomerResponse> createCustomer(@Valid @RequestBody CustomerRequest request) {
+        CustomerResponse customer = customerService.createCustomer(request);
+        return ResponseEntity.ok(customer);
     }
 
     @Operation(summary = "Update customer")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @PreAuthorize("hasAnyRole('MANAGER', 'RECEPTIONIST')")
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'MANAGER')")
-    public ResponseEntity<ApiResponse<CustomerDto>> updateCustomer(
+    public ResponseEntity<CustomerResponse> updateCustomer(
             @PathVariable Long id,
-            @Valid @RequestBody UpdateCustomerRequest request) {
-
-        CustomerDto customer = customerService.updateCustomer(id, request);
-        return ResponseEntity.ok(ApiResponse.success(customer, "Customer updated successfully"));
+            @Valid @RequestBody CustomerRequest request) {
+        CustomerResponse customer = customerService.updateCustomer(id, request);
+        return ResponseEntity.ok(customer);
     }
 
     @Operation(summary = "Delete customer")
-    @DeleteMapping("/{id}")
+    @SecurityRequirement(name = "Bearer Authentication")
     @PreAuthorize("hasRole('MANAGER')")
-    public ResponseEntity<ApiResponse<Void>> deleteCustomer(@PathVariable Long id) {
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteCustomer(@PathVariable Long id) {
         customerService.deleteCustomer(id);
-        return ResponseEntity.ok(ApiResponse.success(null, "Customer deleted successfully"));
+        return ResponseEntity.noContent().build();
     }
 }
