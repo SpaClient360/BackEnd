@@ -39,4 +39,19 @@ public interface IAppointmentService {
      * Update appointment status
      */
     AppointmentResponse updateAppointmentStatus(Long id, String status);
+
+    /**
+     * Get today's appointments
+     */
+    Page<AppointmentResponse> getTodayAppointments(int page, int size, String sortBy, String sortDir);
+
+    /**
+     * Get appointments by date range
+     */
+    Page<AppointmentResponse> getAppointmentsByDateRange(String startDate, String endDate, int page, int size);
+
+    /**
+     * Get technician's appointments
+     */
+    Page<AppointmentResponse> getTechnicianAppointments(Long technicianId, int page, int size);
 }

@@ -20,6 +20,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 /**
  * Spring Security configuration
@@ -33,10 +34,12 @@ public class SecurityConfig {
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final UserDetailsService userDetailsService;
+    private final CorsConfigurationSource corsConfigurationSource;
 
     private static final String[] PUBLIC_URLS = {
             "/api/auth/**",
             "/api/public/**",
+            "/api/debug/**", // Debug endpoints (remove in production)
             "/api/leads", // Allow POST /api/leads without authentication
             "/api/accounts", // Allow POST /api/accounts without authentication
             "/swagger-ui/**",
@@ -67,13 +70,15 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
-                .cors(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(AbstractHttpConfigurer::disable)
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow all OPTIONS requests (CORS
+                                                                                // preflight)
                         .requestMatchers(PUBLIC_URLS).permitAll()
                         .requestMatchers("/api/admin/**").hasRole("MANAGER")
                         .requestMatchers("/api/technician/**").hasAnyRole("TECHNICIAN", "MANAGER")

@@ -57,7 +57,7 @@ public class CustomerController {
     @PostMapping
     public ResponseEntity<CustomerResponse> createCustomer(@Valid @RequestBody CustomerRequest request) {
         CustomerResponse customer = customerService.createCustomer(request);
-        return ResponseEntity.ok(customer);
+        return ResponseEntity.status(HttpStatus.CREATED).body(customer);
     }
 
     @Operation(summary = "Update customer")
@@ -78,5 +78,23 @@ public class CustomerController {
     public ResponseEntity<Void> deleteCustomer(@PathVariable Long id) {
         customerService.deleteCustomer(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Refresh customer tier based on current spending and points")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @PreAuthorize("hasAnyRole('MANAGER', 'RECEPTIONIST')")
+    @PostMapping("/{id}/refresh-tier")
+    public ResponseEntity<CustomerResponse> refreshCustomerTier(@PathVariable Long id) {
+        CustomerResponse customer = customerService.refreshCustomerTier(id);
+        return ResponseEntity.ok(customer);
+    }
+
+    @Operation(summary = "Batch refresh all customers' tiers")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @PreAuthorize("hasRole('MANAGER')")
+    @PostMapping("/refresh-all-tiers")
+    public ResponseEntity<Void> refreshAllCustomerTiers() {
+        customerService.refreshAllCustomerTiers();
+        return ResponseEntity.ok().build();
     }
 }

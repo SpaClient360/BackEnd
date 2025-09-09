@@ -3,6 +3,7 @@ package com.htttql.crmmodule.service.controller;
 import com.htttql.crmmodule.service.dto.CustomerCaseRequest;
 import com.htttql.crmmodule.service.dto.CustomerCaseResponse;
 import com.htttql.crmmodule.service.service.ICustomerCaseService;
+import com.htttql.crmmodule.common.dto.StatusUpdateRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -80,8 +81,8 @@ public class CustomerCaseController {
     @PutMapping("/{id}/status")
     public ResponseEntity<CustomerCaseResponse> updateCustomerCaseStatus(
             @PathVariable Long id,
-            @RequestParam String status) {
-        CustomerCaseResponse customerCase = customerCaseService.updateCustomerCaseStatus(id, status);
+            @Valid @RequestBody StatusUpdateRequest request) {
+        CustomerCaseResponse customerCase = customerCaseService.updateCustomerCaseStatus(id, request.getStatus());
         return ResponseEntity.ok(customerCase);
     }
 }

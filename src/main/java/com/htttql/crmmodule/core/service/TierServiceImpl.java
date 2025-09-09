@@ -12,9 +12,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
-/**
- * Implementation of Tier Service
- */
 @Service
 @RequiredArgsConstructor
 public class TierServiceImpl implements ITierService {
@@ -39,7 +36,7 @@ public class TierServiceImpl implements ITierService {
         Tier tier = Tier.builder()
                 .code(request.getCode())
                 .minPoints(request.getMinPoints())
-                .minSpent(request.getDiscountRate()) // Use discountRate as minSpent for now
+                .minSpent(request.getDiscountRate())
                 .build();
 
         Tier savedTier = tierRepository.save(tier);
@@ -53,7 +50,7 @@ public class TierServiceImpl implements ITierService {
 
         tier.setCode(request.getCode());
         tier.setMinPoints(request.getMinPoints());
-        tier.setMinSpent(request.getDiscountRate()); // Use discountRate as minSpent for now
+        tier.setMinSpent(request.getDiscountRate());
 
         Tier updatedTier = tierRepository.save(tier);
         return mapToResponse(updatedTier);
@@ -71,10 +68,10 @@ public class TierServiceImpl implements ITierService {
         return TierResponse.builder()
                 .tierId(tier.getTierId())
                 .code(tier.getCode())
-                .name(tier.getCode().toString()) // Use code as name
-                .description("Tier " + tier.getCode()) // Generate description from code
+                .name(tier.getCode().toString())
+                .description("Tier " + tier.getCode())
                 .minPoints(tier.getMinPoints())
-                .discountRate(tier.getMinSpent()) // Use minSpent as discountRate
+                .discountRate(tier.getMinSpent())
                 .createdAt(tier.getCreatedAt())
                 .updatedAt(tier.getUpdatedAt())
                 .build();

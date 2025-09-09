@@ -13,10 +13,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Invoice entity for billing customers
- * Tracks payment status and generates point transactions
- */
 @Entity
 @Table(name = "invoice", schema = SchemaConstants.BILLING_SCHEMA, indexes = {
         @Index(name = "idx_invoice_case", columnList = "case_id"),
@@ -79,14 +75,12 @@ public class Invoice extends BaseEntity {
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
-    // Promotion tracking
     @Column(name = "promo_code", length = 50)
     private String promoCode;
 
     @Column(name = "promo_discount", precision = 12, scale = 2)
     private BigDecimal promoDiscount;
 
-    // Points redemption
     @Column(name = "points_redeemed")
     @Builder.Default
     private Integer pointsRedeemed = 0;
@@ -95,7 +89,6 @@ public class Invoice extends BaseEntity {
     @Builder.Default
     private BigDecimal pointsValue = BigDecimal.ZERO;
 
-    // Relationships
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Payment> payments = new ArrayList<>();
@@ -124,10 +117,19 @@ public class Invoice extends BaseEntity {
             BigDecimal tax = taxTotal != null ? taxTotal : BigDecimal.ZERO;
             BigDecimal points = pointsValue != null ? pointsValue : BigDecimal.ZERO;
 
+            // Calculate: subtotal - discount + tax - pointsValue
             grandTotal = subtotal.subtract(discount).add(tax).subtract(points);
 
+            // Ensure grandTotal is not negative
             if (grandTotal.compareTo(BigDecimal.ZERO) < 0) {
-                grandTotal = BigDecimal.ZERO;
+                // If pointsValue causes negative total, reduce pointsValue instead
+                BigDecimal maxPointsValue = subtotal.subtract(discount).add(tax);
+                if (maxPointsValue.compareTo(BigDecimal.ZERO) > 0) {
+                    pointsValue = maxPointsValue;
+                    grandTotal = BigDecimal.ZERO;
+                } else {
+                    grandTotal = BigDecimal.ZERO;
+                }
             }
         }
     }

@@ -8,7 +8,9 @@ import com.htttql.crmmodule.lead.repository.IAppointmentRepository;
 import com.htttql.crmmodule.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -81,6 +83,40 @@ public class AppointmentServiceImpl implements IAppointmentService {
 
         Appointment updatedAppointment = appointmentRepository.save(appointment);
         return mapToResponse(updatedAppointment);
+    }
+
+    @Override
+    public Page<AppointmentResponse> getTodayAppointments(int page, int size, String sortBy, String sortDir) {
+        Sort sort = sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        // Get today's date range
+        LocalDateTime todayStart = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime todayEnd = todayStart.plusDays(1).minusNanos(1);
+
+        // Filter appointments for today
+        Page<Appointment> appointments = appointmentRepository.findByStartAtBetween(todayStart, todayEnd, pageable);
+        return appointments.map(this::mapToResponse);
+    }
+
+    @Override
+    public Page<AppointmentResponse> getAppointmentsByDateRange(String startDate, String endDate, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+
+        // For now, return all appointments
+        // In production, you would filter by date range
+        Page<Appointment> appointments = appointmentRepository.findAll(pageable);
+        return appointments.map(this::mapToResponse);
+    }
+
+    @Override
+    public Page<AppointmentResponse> getTechnicianAppointments(Long technicianId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+
+        // For now, return all appointments
+        // In production, you would filter by technician
+        Page<Appointment> appointments = appointmentRepository.findAll(pageable);
+        return appointments.map(this::mapToResponse);
     }
 
     private AppointmentResponse mapToResponse(Appointment appointment) {

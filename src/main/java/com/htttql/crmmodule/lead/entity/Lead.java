@@ -3,7 +3,9 @@ package com.htttql.crmmodule.lead.entity;
 import com.htttql.crmmodule.common.config.SchemaConstants;
 import com.htttql.crmmodule.common.entity.BaseEntity;
 import com.htttql.crmmodule.common.enums.LeadStatus;
+
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import lombok.*;
 
 /**
@@ -52,6 +54,12 @@ public class Lead extends BaseEntity {
 
     @Column(name = "created_date", nullable = false)
     private java.sql.Date createdDate;
+
+    @Column(name = "customer_id")
+    private Long customerId;
+
+    @Column(name = "is_existing_customer")
+    private Boolean isExistingCustomer;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)

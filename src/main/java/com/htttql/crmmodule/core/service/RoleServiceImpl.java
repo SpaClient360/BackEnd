@@ -13,9 +13,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
-/**
- * Implementation of Role Service
- */
 @Service
 @RequiredArgsConstructor
 public class RoleServiceImpl implements IRoleService {
@@ -38,7 +35,7 @@ public class RoleServiceImpl implements IRoleService {
     @Override
     public RoleResponse createRole(RoleRequest request) {
         Role role = Role.builder()
-                .code(request.getName().toUpperCase()) // Use name as code
+                .code(request.getName().toUpperCase())
                 .name(request.getName())
                 .description(request.getDescription())
                 .build();
@@ -73,7 +70,7 @@ public class RoleServiceImpl implements IRoleService {
                 .roleId(role.getRoleId())
                 .name(role.getName())
                 .description(role.getDescription())
-                .permissions(role.getCode()) // Use code as permissions for now
+                .permissions(role.getCode())
                 .createdAt(role.getCreatedAt())
                 .updatedAt(role.getUpdatedAt())
                 .build();

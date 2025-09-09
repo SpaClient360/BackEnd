@@ -5,9 +5,11 @@ import com.htttql.crmmodule.billing.dto.InvoiceResponse;
 import com.htttql.crmmodule.billing.dto.InvoiceStatusRequest;
 import com.htttql.crmmodule.billing.service.IInvoiceService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +27,8 @@ public class InvoiceController {
     private final IInvoiceService invoiceService;
 
     @Operation(summary = "Get all invoices with pagination")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @PreAuthorize("hasAnyRole('MANAGER', 'RECEPTIONIST')")
     @GetMapping
     public ResponseEntity<Page<InvoiceResponse>> getAllInvoices(
             @RequestParam(defaultValue = "0") int page,
@@ -40,6 +44,8 @@ public class InvoiceController {
     }
 
     @Operation(summary = "Get invoice by ID")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @PreAuthorize("hasAnyRole('MANAGER', 'RECEPTIONIST')")
     @GetMapping("/{id}")
     public ResponseEntity<InvoiceResponse> getInvoiceById(@PathVariable Long id) {
         InvoiceResponse invoice = invoiceService.getInvoiceById(id);
@@ -47,6 +53,8 @@ public class InvoiceController {
     }
 
     @Operation(summary = "Create new invoice")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @PreAuthorize("hasAnyRole('MANAGER', 'RECEPTIONIST')")
     @PostMapping
     public ResponseEntity<InvoiceResponse> createInvoice(@Valid @RequestBody InvoiceRequest request) {
         InvoiceResponse invoice = invoiceService.createInvoice(request);
@@ -54,6 +62,8 @@ public class InvoiceController {
     }
 
     @Operation(summary = "Update invoice")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @PreAuthorize("hasRole('MANAGER')")
     @PutMapping("/{id}")
     public ResponseEntity<InvoiceResponse> updateInvoice(
             @PathVariable Long id,
@@ -63,6 +73,8 @@ public class InvoiceController {
     }
 
     @Operation(summary = "Delete invoice")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @PreAuthorize("hasRole('MANAGER')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteInvoice(@PathVariable Long id) {
         invoiceService.deleteInvoice(id);
@@ -70,6 +82,8 @@ public class InvoiceController {
     }
 
     @Operation(summary = "Update invoice status")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @PreAuthorize("hasAnyRole('MANAGER', 'RECEPTIONIST')")
     @PutMapping("/{id}/status")
     public ResponseEntity<InvoiceResponse> updateInvoiceStatus(
             @PathVariable Long id,

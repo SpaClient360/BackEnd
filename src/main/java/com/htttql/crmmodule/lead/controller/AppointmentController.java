@@ -3,6 +3,7 @@ package com.htttql.crmmodule.lead.controller;
 import com.htttql.crmmodule.lead.dto.AppointmentRequest;
 import com.htttql.crmmodule.lead.dto.AppointmentResponse;
 import com.htttql.crmmodule.lead.service.IAppointmentService;
+import com.htttql.crmmodule.common.dto.StatusUpdateRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -74,14 +75,56 @@ public class AppointmentController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Get today's appointments")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @PreAuthorize("hasAnyRole('MANAGER', 'RECEPTIONIST', 'TECHNICIAN')")
+    @GetMapping("/today")
+    public ResponseEntity<Page<AppointmentResponse>> getTodayAppointments(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "apptId") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+
+        Page<AppointmentResponse> appointments = appointmentService.getTodayAppointments(page, size, sortBy, sortDir);
+        return ResponseEntity.ok(appointments);
+    }
+
+    @Operation(summary = "Get appointments by date range")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @PreAuthorize("hasAnyRole('MANAGER', 'RECEPTIONIST', 'TECHNICIAN')")
+    @GetMapping("/calendar")
+    public ResponseEntity<Page<AppointmentResponse>> getAppointmentsByDateRange(
+            @RequestParam String startDate,
+            @RequestParam String endDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+
+        Page<AppointmentResponse> appointments = appointmentService.getAppointmentsByDateRange(startDate, endDate, page,
+                size);
+        return ResponseEntity.ok(appointments);
+    }
+
+    @Operation(summary = "Get technician's appointments")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @PreAuthorize("hasAnyRole('MANAGER', 'TECHNICIAN')")
+    @GetMapping("/technician/{technicianId}")
+    public ResponseEntity<Page<AppointmentResponse>> getTechnicianAppointments(
+            @PathVariable Long technicianId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        Page<AppointmentResponse> appointments = appointmentService.getTechnicianAppointments(technicianId, page, size);
+        return ResponseEntity.ok(appointments);
+    }
+
     @Operation(summary = "Update appointment status")
     @SecurityRequirement(name = "Bearer Authentication")
     @PreAuthorize("hasAnyRole('MANAGER', 'RECEPTIONIST')")
     @PutMapping("/{id}/status")
     public ResponseEntity<AppointmentResponse> updateAppointmentStatus(
             @PathVariable Long id,
-            @RequestParam String status) {
-        AppointmentResponse appointment = appointmentService.updateAppointmentStatus(id, status);
+            @Valid @RequestBody StatusUpdateRequest request) {
+        AppointmentResponse appointment = appointmentService.updateAppointmentStatus(id, request.getStatus());
         return ResponseEntity.ok(appointment);
     }
 }

@@ -7,9 +7,10 @@ import com.htttql.crmmodule.core.entity.StaffUser;
 import com.htttql.crmmodule.core.repository.StaffUserRepository;
 import com.htttql.crmmodule.security.dto.*;
 import com.htttql.crmmodule.security.jwt.JwtUtils;
+import com.htttql.crmmodule.security.service.TokenBlacklistService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
+
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -22,7 +23,6 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Authentication service
@@ -37,10 +37,7 @@ public class AuthService implements IAuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
     private final OtpService otpService;
-    private final RedisTemplate<String, String> redisTemplate;
-
-    private static final String BLACKLIST_PREFIX = "BLACKLIST:";
-    private static final String REFRESH_TOKEN_PREFIX = "REFRESH:";
+    private final TokenBlacklistService tokenBlacklistService;
 
     public String requestOtp(OtpRequest request) {
         // Find user by email or phone
@@ -111,7 +108,7 @@ public class AuthService implements IAuthService {
 
         // Check if refresh token exists in Redis
         String username = jwtUtils.getUsernameFromToken(refreshToken);
-        String storedToken = redisTemplate.opsForValue().get(REFRESH_TOKEN_PREFIX + username);
+        String storedToken = tokenBlacklistService.getRefreshToken(username);
 
         if (storedToken == null || !storedToken.equals(refreshToken)) {
             throw new UnauthorizedException("Refresh token not found or expired");
@@ -129,8 +126,8 @@ public class AuthService implements IAuthService {
         String newRefreshToken = jwtUtils.generateRefreshToken(username);
 
         // Store new refresh token
-        redisTemplate.opsForValue().set(
-                REFRESH_TOKEN_PREFIX + username,
+        tokenBlacklistService.storeRefreshToken(
+                username,
                 newRefreshToken,
                 Duration.ofMillis(jwtUtils.getRefreshExpirationTime()));
 
@@ -143,17 +140,11 @@ public class AuthService implements IAuthService {
 
             // Add token to blacklist
             long expiration = jwtUtils.getExpirationDateFromToken(token).getTime() - System.currentTimeMillis();
-            if (expiration > 0) {
-                redisTemplate.opsForValue().set(
-                        BLACKLIST_PREFIX + token,
-                        "true",
-                        expiration,
-                        TimeUnit.MILLISECONDS);
-            }
+            tokenBlacklistService.blacklistToken(token, expiration);
 
             // Remove refresh token
             String username = jwtUtils.getUsernameFromToken(token);
-            redisTemplate.delete(REFRESH_TOKEN_PREFIX + username);
+            tokenBlacklistService.removeRefreshToken(username);
         }
     }
 
@@ -197,8 +188,8 @@ public class AuthService implements IAuthService {
         String refreshToken = jwtUtils.generateRefreshToken(username);
 
         // Store refresh token in Redis
-        redisTemplate.opsForValue().set(
-                REFRESH_TOKEN_PREFIX + username,
+        tokenBlacklistService.storeRefreshToken(
+                username,
                 refreshToken,
                 Duration.ofMillis(jwtUtils.getRefreshExpirationTime()));
 
@@ -254,8 +245,7 @@ public class AuthService implements IAuthService {
     @Override
     public boolean validateToken(String token) {
         try {
-            return jwtUtils.validateToken(token) &&
-                    !Boolean.TRUE.equals(redisTemplate.hasKey(BLACKLIST_PREFIX + token));
+            return jwtUtils.validateToken(token) && !tokenBlacklistService.isTokenBlacklisted(token);
         } catch (Exception e) {
             return false;
         }

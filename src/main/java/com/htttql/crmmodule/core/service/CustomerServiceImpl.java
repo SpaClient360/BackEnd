@@ -1,5 +1,6 @@
 package com.htttql.crmmodule.core.service;
 
+import com.htttql.crmmodule.common.enums.TierCode;
 import com.htttql.crmmodule.common.exception.BadRequestException;
 import com.htttql.crmmodule.common.exception.ResourceNotFoundException;
 import com.htttql.crmmodule.core.dto.CustomerRequest;
@@ -16,6 +17,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+
 @Slf4j
 @Service("customerService")
 @RequiredArgsConstructor
@@ -23,6 +26,7 @@ public class CustomerServiceImpl implements ICustomerService {
 
     private final ICustomerRepository customerRepository;
     private final ITierRepository tierRepository;
+    private final ICustomerTierService customerTierService;
     private final ModelMapper modelMapper;
 
     @Override
@@ -50,7 +54,7 @@ public class CustomerServiceImpl implements ICustomerService {
             throw new BadRequestException("Email already exists");
         }
 
-        Tier defaultTier = tierRepository.findByCode("REGULAR")
+        Tier defaultTier = tierRepository.findByCode(TierCode.REGULAR)
                 .orElseThrow(() -> new BadRequestException("Default tier not found"));
 
         Customer customer = Customer.builder()
@@ -66,7 +70,6 @@ public class CustomerServiceImpl implements ICustomerService {
                 .build();
 
         customer = customerRepository.save(customer);
-        log.info("Created new customer: {}", customer.getCustomerId());
         return toResponse(customer);
     }
 
@@ -105,7 +108,6 @@ public class CustomerServiceImpl implements ICustomerService {
             customer.setIsVip(request.getIsVip());
 
         customer = customerRepository.save(customer);
-        log.info("Updated customer: {}", customer.getCustomerId());
         return toResponse(customer);
     }
 
@@ -116,7 +118,24 @@ public class CustomerServiceImpl implements ICustomerService {
             throw new ResourceNotFoundException("Customer", "id", id);
         }
         customerRepository.deleteById(id);
-        log.info("Deleted customer: {}", id);
+    }
+
+    /**
+     * Manually refresh customer tier
+     */
+    @Override
+    @Transactional
+    public CustomerResponse refreshCustomerTier(Long customerId) {
+        return customerTierService.refreshCustomerTier(customerId);
+    }
+
+    /**
+     * Batch refresh all customers' tiers
+     */
+    @Override
+    @Transactional
+    public void refreshAllCustomerTiers() {
+        customerTierService.refreshAllCustomerTiers();
     }
 
     private CustomerResponse toResponse(Customer customer) {

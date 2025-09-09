@@ -8,10 +8,6 @@ import lombok.*;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * Role entity for system access control
- * Three main roles: RECEPTIONIST, TECHNICIAN, MANAGER
- */
 @Entity
 @Table(name = "role", schema = SchemaConstants.CORE_SCHEMA, indexes = {
         @Index(name = "idx_role_code", columnList = "code", unique = true)

@@ -9,6 +9,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Type;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -61,6 +62,12 @@ public class CustomerCase extends BaseEntity {
     @Column(name = "status", nullable = false, length = 20)
     @Builder.Default
     private CaseStatus status = CaseStatus.INTAKE;
+
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
+    @Column(name = "end_date")
+    private LocalDate endDate;
 
     // Relationships
     @OneToMany(mappedBy = "customerCase", cascade = CascadeType.ALL, orphanRemoval = true)

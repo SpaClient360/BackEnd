@@ -8,10 +8,6 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 
-/**
- * Staff user entity for system users
- * Includes receptionists, technicians, and managers
- */
 @Entity
 @Table(name = "staff_user", schema = SchemaConstants.CORE_SCHEMA, indexes = {
         @Index(name = "idx_staff_phone", columnList = "phone", unique = true),
@@ -57,7 +53,6 @@ public class StaffUser extends BaseEntity {
     @Column(name = "last_login_at", columnDefinition = "TIMESTAMPTZ")
     private LocalDateTime lastLoginAt;
 
-    // Transient fields for security
     @Transient
     private String password;
 

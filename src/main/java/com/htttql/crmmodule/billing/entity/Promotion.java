@@ -12,10 +12,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Map;
 
-/**
- * Promotion entity for discount campaigns
- * Supports percentage and fixed amount discounts with conditions
- */
 @Entity
 @Table(name = "promotion", schema = SchemaConstants.BILLING_SCHEMA, indexes = {
         @Index(name = "idx_promo_code", columnList = "code", unique = true),
@@ -64,7 +60,6 @@ public class Promotion extends BaseEntity {
     @Builder.Default
     private Boolean isActive = true;
 
-    // Additional promotion settings
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
@@ -114,7 +109,7 @@ public class Promotion extends BaseEntity {
         }
 
         if (usageLimit != null && usageCount != null && usageCount > usageLimit) {
-            isActive = false; // Auto-deactivate when usage limit reached
+            isActive = false;
         }
     }
 

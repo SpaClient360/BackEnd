@@ -10,10 +10,6 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/**
- * Payment entity for tracking invoice payments
- * Supports multiple payment methods and partial payments
- */
 @Entity
 @Table(name = "payment", schema = SchemaConstants.BILLING_SCHEMA, indexes = {
         @Index(name = "idx_payment_invoice", columnList = "invoice_id"),
@@ -60,7 +56,6 @@ public class Payment extends BaseEntity {
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
 
-    // Additional payment details
     @Column(name = "card_last_four", length = 4)
     private String cardLastFour;
 

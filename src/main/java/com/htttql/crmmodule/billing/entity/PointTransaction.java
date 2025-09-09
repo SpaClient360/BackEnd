@@ -7,10 +7,6 @@ import com.htttql.crmmodule.core.entity.Customer;
 import jakarta.persistence.*;
 import lombok.*;
 
-/**
- * Point transaction entity for loyalty program
- * Tracks points earned, redeemed, and adjusted
- */
 @Entity
 @Table(name = "point_transaction", schema = SchemaConstants.BILLING_SCHEMA, indexes = {
         @Index(name = "idx_point_txn_customer", columnList = "customer_id"),
@@ -50,7 +46,6 @@ public class PointTransaction extends BaseEntity {
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
 
-    // Additional tracking fields
     @Column(name = "balance_before", nullable = false)
     private Integer balanceBefore;
 
@@ -71,13 +66,10 @@ public class PointTransaction extends BaseEntity {
     protected void onCreate() {
         super.onCreate();
         if (referenceNumber == null) {
-            // Generate reference number format: PTS-YYYYMMDD-XXXXX
             referenceNumber = String.format("PTS-%tF-%05d",
                     java.time.LocalDateTime.now(),
                     System.currentTimeMillis() % 100000);
         }
-
-        // Set expiry date (e.g., 1 year from creation for earned points)
         if (source == PointTransactionType.EARN && expiresAt == null) {
             expiresAt = java.time.LocalDateTime.now().plusYears(1);
         }
@@ -93,7 +85,6 @@ public class PointTransaction extends BaseEntity {
             throw new IllegalArgumentException("Point balance cannot be negative");
         }
 
-        // Validate balance calculation
         if (balanceBefore + points != balanceAfter) {
             throw new IllegalArgumentException("Point balance calculation mismatch");
         }

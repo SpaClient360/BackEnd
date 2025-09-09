@@ -5,6 +5,7 @@ import com.htttql.crmmodule.audit.dto.TaskRequest;
 import com.htttql.crmmodule.audit.dto.TaskResponse;
 import com.htttql.crmmodule.audit.dto.RetouchScheduleRequest;
 import com.htttql.crmmodule.audit.dto.RetouchScheduleResponse;
+import com.htttql.crmmodule.common.dto.StatusUpdateRequest;
 import com.htttql.crmmodule.audit.service.IAuditService;
 import com.htttql.crmmodule.audit.service.ITaskService;
 import com.htttql.crmmodule.audit.service.IRetouchScheduleService;
@@ -35,7 +36,7 @@ public class AuditController {
     private final IRetouchScheduleService retouchScheduleService;
 
     // ==================== AUDIT LOGS ====================
-    
+
     @Operation(summary = "Get all audit logs with pagination")
     @SecurityRequirement(name = "Bearer Authentication")
     @PreAuthorize("hasRole('MANAGER')")
@@ -55,7 +56,7 @@ public class AuditController {
     }
 
     // ==================== TASKS ====================
-    
+
     @Operation(summary = "Get all tasks with pagination")
     @SecurityRequirement(name = "Bearer Authentication")
     @PreAuthorize("hasAnyRole('MANAGER', 'TECHNICIAN')")
@@ -100,13 +101,13 @@ public class AuditController {
     @PutMapping("/tasks/{id}/status")
     public ResponseEntity<TaskResponse> updateTaskStatus(
             @PathVariable Long id,
-            @RequestParam String status) {
-        TaskResponse task = taskService.updateTaskStatus(id, status);
+            @Valid @RequestBody StatusUpdateRequest request) {
+        TaskResponse task = taskService.updateTaskStatus(id, request.getStatus());
         return ResponseEntity.ok(task);
     }
 
     // ==================== RETOUCH SCHEDULES ====================
-    
+
     @Operation(summary = "Get all retouch schedules with pagination")
     @SecurityRequirement(name = "Bearer Authentication")
     @PreAuthorize("hasAnyRole('MANAGER', 'TECHNICIAN')")
@@ -152,8 +153,8 @@ public class AuditController {
     @PutMapping("/retouch-schedules/{id}/status")
     public ResponseEntity<RetouchScheduleResponse> updateRetouchScheduleStatus(
             @PathVariable Long id,
-            @RequestParam String status) {
-        RetouchScheduleResponse schedule = retouchScheduleService.updateRetouchScheduleStatus(id, status);
+            @Valid @RequestBody StatusUpdateRequest request) {
+        RetouchScheduleResponse schedule = retouchScheduleService.updateRetouchScheduleStatus(id, request.getStatus());
         return ResponseEntity.ok(schedule);
     }
 }

@@ -9,10 +9,6 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/**
- * Customer entity for spa clients
- * Tracks customer information, loyalty points, and spending
- */
 @Entity
 @Table(name = "customer", schema = SchemaConstants.CORE_SCHEMA, indexes = {
         @Index(name = "idx_customer_phone", columnList = "phone", unique = true),
@@ -66,7 +62,6 @@ public class Customer extends BaseEntity {
     @Builder.Default
     private BigDecimal totalSpent = BigDecimal.ZERO;
 
-    // Additional fields for customer preferences
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 

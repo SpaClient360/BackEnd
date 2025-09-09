@@ -5,67 +5,62 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.Arrays;
 import java.util.List;
 
-/**
- * CORS configuration for the application
- */
 @Configuration
-public class CorsConfig implements WebMvcConfigurer {
+public class CorsConfig {
+        private static final List<String> ALLOWED_ORIGINS = List.of(
+                        "http://localhost:3000",
+                        "http://localhost:3001",
+                        "http://localhost:4200",
+                        "http://localhost:4201",
+                        "http://localhost:5173",
+                        "http://localhost:5174",
+                        "http://localhost:8080",
+                        "http://localhost:8081",
+                        "http://127.0.0.1:3000",
+                        "http://127.0.0.1:5173",
+                        "http://127.0.0.1:5174");
 
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**")
-                .allowedOrigins(
-                        "http://localhost:3000", // React default
-                        "http://localhost:4200", // Angular default
-                        "http://localhost:5173", // Vite default
-                        "http://localhost:8080", // Vue CLI default
-                        "http://localhost:3001", // Alternative React port
-                        "http://localhost:4201" // Alternative Angular port
-                )
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "TRACE", "CONNECT")
-                .allowedHeaders("*")
-                .allowCredentials(true)
-                .maxAge(3600);
-    }
+        private static final List<String> ALLOWED_METHODS = Arrays.asList(
+                        "GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH");
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
+        private static final List<String> ALLOWED_HEADERS = List.of(
+                        "Authorization",
+                        "Content-Type",
+                        "X-Requested-With",
+                        "Accept",
+                        "Origin",
+                        "Access-Control-Request-Method",
+                        "Access-Control-Request-Headers");
 
-        // Allow specific origins
-        configuration.setAllowedOrigins(List.of(
-                "http://localhost:3000", // React default
-                "http://localhost:4200", // Angular default
-                "http://localhost:5173", // Vite default
-                "http://localhost:8080", // Vue CLI default
-                "http://localhost:3001", // Alternative React port
-                "http://localhost:4201" // Alternative Angular port
-        ));
+        private static final List<String> EXPOSED_HEADERS = List.of(
+                        "Authorization",
+                        "Content-Type",
+                        "X-Requested-With",
+                        "X-Total-Count");
 
-        // Allow all HTTP methods
-        configuration.setAllowedMethods(
-                Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "TRACE", "CONNECT"));
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource() {
+                CorsConfiguration configuration = new CorsConfiguration();
 
-        // Allow all headers
-        configuration.setAllowedHeaders(List.of("*"));
+                configuration.setAllowedOrigins(ALLOWED_ORIGINS);
 
-        // Allow credentials (cookies, authorization headers)
-        configuration.setAllowCredentials(true);
+                configuration.setAllowedMethods(ALLOWED_METHODS);
 
-        // Cache preflight response for 1 hour
-        configuration.setMaxAge(3600L);
+                configuration.setAllowedHeaders(ALLOWED_HEADERS);
 
-        // Allow exposed headers
-        configuration.setExposedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
+                configuration.setExposedHeaders(EXPOSED_HEADERS);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
+                configuration.setAllowCredentials(true);
+
+                configuration.setMaxAge(3600L);
+
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", configuration);
+
+                return source;
+        }
 }

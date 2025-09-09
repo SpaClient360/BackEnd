@@ -16,4 +16,8 @@ public interface ICustomerService {
     CustomerResponse updateCustomer(Long id, CustomerRequest request);
 
     void deleteCustomer(Long id);
+
+    CustomerResponse refreshCustomerTier(Long customerId);
+
+    void refreshAllCustomerTiers();
 }

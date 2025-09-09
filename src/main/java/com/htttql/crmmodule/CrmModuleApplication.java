@@ -5,10 +5,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-/**
- * Main application class for the CRM module.
- */
-
 @SpringBootApplication
 @EnableAsync
 @EnableScheduling

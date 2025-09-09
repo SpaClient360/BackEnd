@@ -16,6 +16,8 @@ public interface IServiceRepository extends JpaRepository<SpaService, Long> {
 
     List<SpaService> findByIsActiveTrue();
 
+    List<SpaService> findByIsActive(Boolean isActive);
+
     @Query("SELECT s FROM SpaService s WHERE " +
             "(:search IS NULL OR LOWER(s.name) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(s.description) LIKE LOWER(CONCAT('%', :search, '%'))) " +

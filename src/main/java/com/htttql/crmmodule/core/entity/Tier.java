@@ -13,10 +13,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Customer tier entity for loyalty program
- * Tiers: REGULAR, SILVER, GOLD, VIP
- */
 @Entity
 @Table(name = "tier", schema = SchemaConstants.CORE_SCHEMA, indexes = {
         @Index(name = "idx_tier_code", columnList = "code", unique = true),

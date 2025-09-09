@@ -9,6 +9,8 @@ public interface IServiceService {
 
     Page<ServiceResponse> getAllServices(Pageable pageable);
 
+    Page<ServiceResponse> getAllServicesByActiveStatus(Pageable pageable, Boolean isActive);
+
     ServiceResponse getServiceById(Long id);
 
     ServiceResponse createService(ServiceRequest request);

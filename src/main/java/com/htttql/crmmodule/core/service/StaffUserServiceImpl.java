@@ -67,7 +67,6 @@ public class StaffUserServiceImpl implements IStaffUserService {
                 .build();
 
         staffUser = staffUserRepository.save(staffUser);
-        log.info("Created new staff user: {}", staffUser.getStaffId());
         return toResponse(staffUser);
     }
 
@@ -106,7 +105,6 @@ public class StaffUserServiceImpl implements IStaffUserService {
         }
 
         staffUser = staffUserRepository.save(staffUser);
-        log.info("Updated staff user: {}", staffUser.getStaffId());
         return toResponse(staffUser);
     }
 
@@ -117,7 +115,6 @@ public class StaffUserServiceImpl implements IStaffUserService {
             throw new ResourceNotFoundException("StaffUser", "id", id);
         }
         staffUserRepository.deleteById(id);
-        log.info("Deleted staff user: {}", id);
     }
 
     @Override
@@ -128,7 +125,6 @@ public class StaffUserServiceImpl implements IStaffUserService {
 
         staffUser.setStatus(request.getStatus());
         staffUser = staffUserRepository.save(staffUser);
-        log.info("Updated staff user status: {} to {}", staffUser.getStaffId(), request.getStatus());
         return toResponse(staffUser);
     }
 

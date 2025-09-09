@@ -1,8 +1,10 @@
 package com.htttql.crmmodule.lead.controller;
 
+import com.htttql.crmmodule.common.enums.LeadStatus;
 import com.htttql.crmmodule.lead.dto.LeadRequest;
 import com.htttql.crmmodule.lead.dto.LeadResponse;
 import com.htttql.crmmodule.lead.dto.LeadStatusRequest;
+import com.htttql.crmmodule.lead.dto.LeadStats;
 import com.htttql.crmmodule.lead.service.ILeadService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -88,5 +90,32 @@ public class LeadController {
             @Valid @RequestBody LeadStatusRequest request) {
         LeadResponse lead = leadService.updateLeadStatus(id, request);
         return ResponseEntity.ok(lead);
+    }
+
+    @Operation(summary = "Get lead statistics")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @PreAuthorize("hasAnyRole('MANAGER', 'RECEPTIONIST')")
+    @GetMapping("/stats")
+    public ResponseEntity<LeadStats> getLeadStats() {
+        LeadStats stats = leadService.getLeadStats();
+        return ResponseEntity.ok(stats);
+    }
+
+    @Operation(summary = "Get leads by status")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @PreAuthorize("hasAnyRole('MANAGER', 'RECEPTIONIST')")
+    @GetMapping("/status/{status}")
+    public ResponseEntity<Page<LeadResponse>> getLeadsByStatus(
+            @PathVariable LeadStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "leadId") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+
+        Sort sort = sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<LeadResponse> leads = leadService.getLeadsByStatus(status, pageable);
+        return ResponseEntity.ok(leads);
     }
 }

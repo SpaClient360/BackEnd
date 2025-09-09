@@ -3,6 +3,7 @@ package com.htttql.crmmodule.billing.controller;
 import com.htttql.crmmodule.billing.dto.PaymentRequest;
 import com.htttql.crmmodule.billing.dto.PaymentResponse;
 import com.htttql.crmmodule.billing.service.IPaymentService;
+import com.htttql.crmmodule.common.dto.StatusUpdateRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -80,8 +81,8 @@ public class PaymentController {
     @PutMapping("/{id}/status")
     public ResponseEntity<PaymentResponse> updatePaymentStatus(
             @PathVariable Long id,
-            @RequestParam String status) {
-        PaymentResponse payment = paymentService.updatePaymentStatus(id, status);
+            @Valid @RequestBody StatusUpdateRequest request) {
+        PaymentResponse payment = paymentService.updatePaymentStatus(id, request.getStatus());
         return ResponseEntity.ok(payment);
     }
 }

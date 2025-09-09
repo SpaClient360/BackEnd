@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import com.htttql.crmmodule.security.service.TokenBlacklistService;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -28,6 +29,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtils jwtUtils;
     private final UserDetailsService userDetailsService;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Override
     protected void doFilterInternal(
@@ -38,7 +40,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String jwt = getJwtFromRequest(request);
 
-            if (StringUtils.hasText(jwt) && jwtUtils.validateToken(jwt)) {
+            if (StringUtils.hasText(jwt) && isTokenValidAndNotBlacklisted(jwt)) {
                 String username = jwtUtils.getUsernameFromToken(jwt);
 
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
@@ -54,7 +56,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                     log.debug("Set Authentication for user: {}", username);
+                } else {
+                    log.debug("Token validation failed for user: {}", username);
                 }
+            } else if (StringUtils.hasText(jwt)) {
+                log.debug("Token is invalid or blacklisted");
             }
         } catch (Exception ex) {
             log.error("Cannot set user authentication: {}", ex.getMessage());
@@ -71,5 +77,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         return null;
+    }
+
+    /**
+     * Validates token and checks if it's not blacklisted
+     * This ensures consistency with AuthService.validateToken()
+     */
+    private boolean isTokenValidAndNotBlacklisted(String token) {
+        try {
+            // First check if token is structurally valid
+            if (!jwtUtils.validateToken(token)) {
+                log.debug("Token structure validation failed");
+                return false;
+            }
+
+            // Then check if token is blacklisted
+            if (tokenBlacklistService.isTokenBlacklisted(token)) {
+                log.debug("Token is blacklisted");
+                return false;
+            }
+
+            log.debug("Token is valid and not blacklisted");
+            return true;
+        } catch (Exception e) {
+            log.error("Error validating token: {}", e.getMessage());
+            return false;
+        }
     }
 }

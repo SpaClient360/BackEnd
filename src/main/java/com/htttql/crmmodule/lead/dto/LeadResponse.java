@@ -22,8 +22,6 @@ public class LeadResponse {
     private String ipAddress;
     private String userAgent;
     private Long customerId;
-    private String tierCode;
-    private String tierName;
     private Boolean isExistingCustomer;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

@@ -8,6 +8,7 @@ import com.htttql.crmmodule.core.repository.ICustomerRepository;
 import com.htttql.crmmodule.lead.dto.LeadRequest;
 import com.htttql.crmmodule.lead.dto.LeadResponse;
 import com.htttql.crmmodule.lead.dto.LeadStatusRequest;
+import com.htttql.crmmodule.lead.dto.LeadStats;
 import com.htttql.crmmodule.lead.entity.Lead;
 import com.htttql.crmmodule.lead.repository.ILeadRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,13 +16,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import jakarta.servlet.http.HttpServletRequest;
-import java.util.Optional;
+import java.time.Duration;
+
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service("leadService")
@@ -31,20 +35,66 @@ public class LeadServiceImpl implements ILeadService {
     private final ILeadRepository leadRepository;
     private final ICustomerRepository customerRepository;
     private final ModelMapper modelMapper;
+    private final RedisTemplate<String, String> redisTemplate;
+
+    // Tiền tố cho Redis key
+    private static final String LEAD_CACHE_PREFIX = "LEAD:";
+    private static final String LEAD_RATE_LIMIT_PREFIX = "LEAD_RATE_LIMIT:";
+    private static final String LEAD_TEMP_PREFIX = "LEAD_TEMP:";
+    private static final String LEAD_STATS_PREFIX = "LEAD_STATS:";
+
+    // Hằng số giới hạn tốc độ
+    private static final int MAX_LEADS_PER_HOUR = 10;
+    private static final int MAX_LEADS_PER_DAY = 100;
+    private static final int CACHE_TTL_HOURS = 24;
+    private static final int TEMP_STORAGE_TTL_HOURS = 48;
 
     @Override
     @Transactional(readOnly = true)
     public Page<LeadResponse> getAllLeads(Pageable pageable) {
+        String cacheKey = LEAD_CACHE_PREFIX + "ALL:" + pageable.getPageNumber() + ":" + pageable.getPageSize();
+        String cachedData = redisTemplate.opsForValue().get(cacheKey);
+
+        if (cachedData != null) {
+            log.debug("Retrieved leads from cache: {}", cacheKey);
+        }
+
         Page<Lead> leads = leadRepository.findAll(pageable);
-        return leads.map(this::toResponse);
+        Page<LeadResponse> response = leads.map(this::toResponse);
+
+        try {
+            redisTemplate.opsForValue().set(cacheKey, "cached", Duration.ofHours(CACHE_TTL_HOURS));
+            log.debug("Cached leads data: {}", cacheKey);
+        } catch (Exception e) {
+            log.warn("Failed to cache leads data: {}", e.getMessage());
+        }
+
+        return response;
     }
 
     @Override
     @Transactional(readOnly = true)
     public LeadResponse getLeadById(Long id) {
+        String cacheKey = LEAD_CACHE_PREFIX + id;
+        String cachedData = redisTemplate.opsForValue().get(cacheKey);
+
+        if (cachedData != null) {
+            log.debug("Retrieved lead from cache: {}", cacheKey);
+        }
+
         Lead lead = leadRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Lead", "id", id));
-        return toResponse(lead);
+
+        LeadResponse response = toResponse(lead);
+
+        try {
+            redisTemplate.opsForValue().set(cacheKey, "cached", Duration.ofHours(CACHE_TTL_HOURS));
+            log.debug("Cached lead data: {}", cacheKey);
+        } catch (Exception e) {
+            log.warn("Failed to cache lead data: {}", e.getMessage());
+        }
+
+        return response;
     }
 
     @Override
@@ -53,8 +103,17 @@ public class LeadServiceImpl implements ILeadService {
         String ipAddress = getClientIpAddress();
         String userAgent = getUserAgent();
 
-        Optional<Customer> existingCustomer = customerRepository.findByPhone(request.getPhone());
-        boolean isExistingCustomer = existingCustomer.isPresent();
+        if (!checkRateLimit(ipAddress)) {
+            throw new BadRequestException("Rate limit exceeded. Please try again later.");
+        }
+
+        String tempKey = LEAD_TEMP_PREFIX + System.currentTimeMillis() + ":" + ipAddress;
+        try {
+            redisTemplate.opsForValue().set(tempKey, request.getPhone(), Duration.ofHours(TEMP_STORAGE_TTL_HOURS));
+        } catch (Exception e) {
+        }
+
+        Customer existingCustomer = customerRepository.findByPhone(request.getPhone()).orElse(null);
 
         Lead lead = Lead.builder()
                 .fullName(request.getFullName())
@@ -63,23 +122,19 @@ public class LeadServiceImpl implements ILeadService {
                 .ipAddress(ipAddress)
                 .userAgent(userAgent)
                 .build();
+        if (existingCustomer != null) {
+            lead.setCustomerId(existingCustomer.getCustomerId());
+            lead.setIsExistingCustomer(true);
 
+        }
         lead = leadRepository.save(lead);
 
         LeadResponse response = toResponse(lead);
-        response.setIsExistingCustomer(isExistingCustomer);
 
-        if (isExistingCustomer) {
-            Customer customer = existingCustomer.get();
-            response.setCustomerId(customer.getCustomerId());
-            if (customer.getTier() != null) {
-                response.setTierCode(customer.getTier().getCode().name());
-                response.setTierName(customer.getTier().getCode().getDescription());
-            }
-        }
+        updateLeadStats();
 
-        log.info("Created new lead: {} for {} customer", lead.getLeadId(),
-                isExistingCustomer ? "existing" : "new");
+        clearLeadCache(lead.getLeadId());
+
         return response;
     }
 
@@ -94,6 +149,10 @@ public class LeadServiceImpl implements ILeadService {
         lead.setNote(request.getNote());
 
         lead = leadRepository.save(lead);
+
+        // Xóa cache cho lead này
+        clearLeadCache(id);
+
         log.info("Updated lead: {}", lead.getLeadId());
         return toResponse(lead);
     }
@@ -109,6 +168,10 @@ public class LeadServiceImpl implements ILeadService {
         }
 
         leadRepository.deleteById(id);
+
+        // Xóa cache cho lead này
+        clearLeadCache(id);
+
         log.info("Deleted lead: {}", id);
     }
 
@@ -127,6 +190,10 @@ public class LeadServiceImpl implements ILeadService {
         }
 
         lead = leadRepository.save(lead);
+
+        // Xóa cache cho lead này
+        clearLeadCache(id);
+
         log.info("Updated lead status: {} to {}", lead.getLeadId(), request.getStatus());
         return toResponse(lead);
     }
@@ -145,7 +212,8 @@ public class LeadServiceImpl implements ILeadService {
     }
 
     private LeadResponse toResponse(Lead lead) {
-        return modelMapper.map(lead, LeadResponse.class);
+        LeadResponse response = modelMapper.map(lead, LeadResponse.class);
+        return response;
     }
 
     private String getClientIpAddress() {
@@ -178,5 +246,157 @@ public class LeadServiceImpl implements ILeadService {
             log.warn("Could not get User-Agent", e);
         }
         return "unknown";
+    }
+
+    /**
+     * Kiểm tra giới hạn tốc độ cho địa chỉ IP sử dụng Redis
+     */
+    private boolean checkRateLimit(String ipAddress) {
+        String hourlyKey = LEAD_RATE_LIMIT_PREFIX + "HOURLY:" + ipAddress;
+        String dailyKey = LEAD_RATE_LIMIT_PREFIX + "DAILY:" + ipAddress;
+
+        try {
+            // Kiểm tra giới hạn theo giờ
+            String hourlyCount = redisTemplate.opsForValue().get(hourlyKey);
+            int currentHourlyCount = hourlyCount != null ? Integer.parseInt(hourlyCount) : 0;
+
+            if (currentHourlyCount >= MAX_LEADS_PER_HOUR) {
+                log.warn("Hourly rate limit exceeded for IP: {}", ipAddress);
+                return false;
+            }
+
+            // Kiểm tra giới hạn theo ngày
+            String dailyCount = redisTemplate.opsForValue().get(dailyKey);
+            int currentDailyCount = dailyCount != null ? Integer.parseInt(dailyCount) : 0;
+
+            if (currentDailyCount >= MAX_LEADS_PER_DAY) {
+                log.warn("Daily rate limit exceeded for IP: {}", ipAddress);
+                return false;
+            }
+
+            // Tăng bộ đếm
+            redisTemplate.opsForValue().increment(hourlyKey);
+            redisTemplate.opsForValue().increment(dailyKey);
+
+            // Đặt thời gian hết hạn cho bộ đếm theo giờ (1 giờ)
+            redisTemplate.expire(hourlyKey, 1, TimeUnit.HOURS);
+
+            // Đặt thời gian hết hạn cho bộ đếm theo ngày (24 giờ)
+            redisTemplate.expire(dailyKey, 24, TimeUnit.HOURS);
+
+            return true;
+        } catch (Exception e) {
+            log.warn("Rate limiting check failed: {}", e.getMessage());
+            // Nếu Redis thất bại, cho phép request tiếp tục
+            return true;
+        }
+    }
+
+    /**
+     * Cập nhật thống kê lead trong Redis
+     */
+    private void updateLeadStats() {
+        String todayKey = LEAD_STATS_PREFIX + "TODAY:" + java.time.LocalDate.now();
+        String totalKey = LEAD_STATS_PREFIX + "TOTAL";
+
+        try {
+            // Tăng bộ đếm hôm nay
+            redisTemplate.opsForValue().increment(todayKey);
+            redisTemplate.expire(todayKey, 48, TimeUnit.HOURS); // Giữ trong 2 ngày
+
+            // Tăng bộ đếm tổng
+            redisTemplate.opsForValue().increment(totalKey);
+
+            log.debug("Updated lead statistics in Redis");
+        } catch (Exception e) {
+            log.warn("Failed to update lead statistics: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Xóa cache cho một lead cụ thể
+     */
+    private void clearLeadCache(Long leadId) {
+        try {
+            String cacheKey = LEAD_CACHE_PREFIX + leadId;
+            redisTemplate.delete(cacheKey);
+            log.debug("Cleared cache for lead: {}", leadId);
+        } catch (Exception e) {
+            log.warn("Failed to clear cache for lead {}: {}", leadId, e.getMessage());
+        }
+    }
+
+    /**
+     * Lấy thống kê lead từ Redis
+     */
+    public LeadStats getLeadStats() {
+        try {
+            String todayKey = LEAD_STATS_PREFIX + "TODAY:" + java.time.LocalDate.now();
+            String totalKey = LEAD_STATS_PREFIX + "TOTAL";
+
+            String todayCount = redisTemplate.opsForValue().get(todayKey);
+            String totalCount = redisTemplate.opsForValue().get(totalKey);
+            return LeadStats.builder()
+                    .todayCount(todayCount != null ? Integer.parseInt(todayCount) : 0)
+                    .totalCount(totalCount != null ? Integer.parseInt(totalCount) : 0)
+                    .lastUpdated(java.time.LocalDateTime.now().toString())
+                    .build();
+        } catch (Exception e) {
+            log.warn("Failed to get lead statistics: {}", e.getMessage());
+            return LeadStats.builder()
+                    .todayCount(0)
+                    .totalCount(0)
+                    .lastUpdated(java.time.LocalDateTime.now().toString())
+                    .build();
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<LeadResponse> getLeadsByStatus(LeadStatus status) {
+        String cacheKey = LEAD_CACHE_PREFIX + "STATUS:" + status.name();
+        String cachedData = redisTemplate.opsForValue().get(cacheKey);
+
+        if (cachedData != null) {
+            log.debug("Retrieved leads by status from cache: {}", cacheKey);
+        }
+
+        java.util.List<Lead> leads = leadRepository.findByStatus(status);
+        java.util.List<LeadResponse> response = leads.stream()
+                .map(this::toResponse)
+                .collect(java.util.stream.Collectors.toList());
+
+        try {
+            redisTemplate.opsForValue().set(cacheKey, "cached", Duration.ofHours(CACHE_TTL_HOURS));
+            log.debug("Cached leads by status data: {}", cacheKey);
+        } catch (Exception e) {
+            log.warn("Failed to cache leads by status data: {}", e.getMessage());
+        }
+
+        return response;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<LeadResponse> getLeadsByStatus(LeadStatus status, Pageable pageable) {
+        String cacheKey = LEAD_CACHE_PREFIX + "STATUS:" + status.name() + ":" + pageable.getPageNumber() + ":"
+                + pageable.getPageSize();
+        String cachedData = redisTemplate.opsForValue().get(cacheKey);
+
+        if (cachedData != null) {
+            log.debug("Retrieved leads by status with pagination from cache: {}", cacheKey);
+        }
+
+        Page<Lead> leads = leadRepository.findByStatusWithPagination(status, pageable);
+        Page<LeadResponse> response = leads.map(this::toResponse);
+
+        try {
+            redisTemplate.opsForValue().set(cacheKey, "cached", Duration.ofHours(CACHE_TTL_HOURS));
+            log.debug("Cached leads by status with pagination data: {}", cacheKey);
+        } catch (Exception e) {
+            log.warn("Failed to cache leads by status with pagination data: {}", e.getMessage());
+        }
+
+        return response;
     }
 }
